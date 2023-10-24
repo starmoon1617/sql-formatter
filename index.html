@@ -1,0 +1,132 @@
+﻿<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"> 
+    <link href="./res/@mdi/font/css/materialdesignicons.css" rel="stylesheet" />
+    <link href="./res/css/vuetify.min.css" rel="stylesheet" />
+</head>
+<body>
+<div id="app" style="width: 800px;height: 500px;">
+    <v-app>
+	<v-main>
+      <v-container>
+          <v-row>
+            <v-col cols="2" sm="12" md="12"><v-textarea label="Prepare SQL" v-model="prepareSql" auto-grow variant="outlined" rows="8" row-height="15" ></v-textarea>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="2" sm="12" md="12"><v-textarea label="Paramters"  v-model="parameters"  auto-grow variant="outlined" rows="5" row-height="15" ></v-textarea>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="1" sm="6" md="2">
+                <v-btn variant="outlined" color="primary" dark class="mb-2" @click="format">Format</v-btn>
+            </v-col>
+            <v-col cols="1" sm="6" md="10"><v-textarea label="Query SQL" auto-grow variant="outlined" rows="8" row-height="15" v-model="querySql" readonly="true"></v-textarea>
+            </v-col>
+          </v-row>
+
+          <v-dialog v-model="confirmDialog" max-width="300px">
+            <v-card>
+                <v-card-title>
+                    <span class="headline">Error</span>
+                </v-card-title>
+                <v-card-text> {{confirmMsg}} </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="blue darken-1" text @click="colseConfirm">确定</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+      </v-container>
+	</v-main>
+    </v-app>
+  </div>
+  <script src="./res/js/vue.global.prod.js"></script>
+  <script src="./res/js/vuetify.min.js" ></script>
+  <script src="./res/js/vue-clipboard.min.js" ></script>
+  <script>
+      const { createApp } = Vue;
+      const app = createApp({
+		  el: '#app',
+		  data() {
+			  return {
+				  prepareSql : null,
+				  parameters : null,
+				  querySql : null,
+				  confirmMsg : null,
+				  confirmDialog : false
+			  }
+		  },
+		  methods: {
+			  format() {
+                const _this = this;
+                if(!_this.prepareSql) {
+                    _this.showConfirm("Prepare SQL is NULL!");
+                    return ;
+                }
+                if(!_this.parameters) {
+                    _this.showConfirm("Parameters is NULL!");
+                    return ;
+                }
+                let pSql = _this.prepareSql;
+                let pIndex = _this.prepareSql.indexOf('Preparing:');
+                if (pIndex >= 0) {
+                    pSql = _this.prepareSql.substring(pIndex + 11);
+                }
+                let pParams = _this.parameters;
+                pIndex = _this.parameters.indexOf('Parameters:');
+                if (pIndex >= 0) {
+                    pParams = _this.parameters.substring(pIndex + 11);
+                }
+
+                let params = pParams.split(',');
+                let index = 0;
+                _this.querySql = pSql.replace(/\?/g, () => {
+                    const value = params[index++].trim();
+                    if (value === "null" || value === "NULL") {
+                        return "NULL";
+                    }
+                    let sIndex = value.lastIndexOf('(String)');
+                    if(sIndex > 0) {
+                        return "'" + (new String(value.substring(0, sIndex))) + "'";
+                    }
+                    sIndex = value.lastIndexOf('(Timestamp)');
+                    if(sIndex > 0) {
+                        return "'" + (new String(value.substring(0, sIndex))) + "'";
+                    }
+                    sIndex = value.lastIndexOf('(Date)');
+                    if(sIndex > 0) {
+                        return "'" + (new String(value.substring(0, sIndex))) + "'";
+                    }
+                    sIndex = value.lastIndexOf('(Long)');
+                    if(sIndex > 0) {
+                        return (new String(value.substring(0, sIndex)));
+                    }
+                    sIndex = value.lastIndexOf('(Double)');
+                    if(sIndex > 0) {
+                        return (new String(value.substring(0, sIndex)));
+                    }
+                    return (new Number(value.substring(0, value.lastIndexOf('('))));
+                });
+                _this.$copyText(_this.querySql).then(function (e) {
+                    
+                }, function (e) {
+                    
+                });
+            },
+            colseConfirm() {
+                this.confirmDialog = false;
+            },
+            showConfirm(msg) {
+                this.confirmMsg = msg;
+                this.confirmDialog = true;
+            }
+        
+        }
+    });
+
+	app.use(VueClipboard).use(Vuetify.createVuetify({theme: { defaultTheme: 'light' },})).mount('#app');
+  </script>
+  </body>
+</html>
